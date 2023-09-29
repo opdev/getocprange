@@ -1,4 +1,4 @@
-module github.com/opdev/get-ocp-range
+module github.com/opdev/getocprange
 
 go 1.20
 
