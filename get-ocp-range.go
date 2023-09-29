@@ -1,7 +1,7 @@
 // This package creates a CLI that allows to derive a range of OCP versions from a given range of
 // Kubernetes versions. It uses Mastermind/semver/v3 under the hood.
 
-package main
+package getocprange
 
 import "embed"
 import "fmt"

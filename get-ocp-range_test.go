@@ -1,4 +1,4 @@
-package main
+package getocprange
 
 import (
 	. "github.com/onsi/ginkgo/v2"
