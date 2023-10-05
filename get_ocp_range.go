@@ -11,8 +11,8 @@ import (
 )
 
 import (
-	"github.com/spf13/cobra"
 	"github.com/Masterminds/semver/v3"
+	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
