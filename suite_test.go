@@ -1,5 +1,5 @@
 /*
-Copyright 2021.
+Copyright 2023.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,15 +21,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	//+kubebuilder:scaffold:imports
 )
-
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	RunSpecs(t, "Testing suite")
 }
-
