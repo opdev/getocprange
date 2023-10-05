@@ -3,14 +3,18 @@
 
 package getocprange
 
-import "embed"
-import "fmt"
-import "os"
-import "strings"
+import (
+	"embed"
+	"fmt"
+	"os"
+	"strings"
+)
 
-import "github.com/spf13/cobra"
-import "github.com/Masterminds/semver/v3"
-import "gopkg.in/yaml.v3"
+import (
+	"github.com/spf13/cobra"
+	"github.com/Masterminds/semver/v3"
+	"gopkg.in/yaml.v3"
+)
 
 //go:embed kubeOpenShiftVersionMap.yaml
 var content embed.FS
@@ -138,11 +142,11 @@ func isRangeOpenEnded(kubeVersionRangeConstraint *semver.Constraints) bool {
 }
 
 var rootCmd = &cobra.Command{
-    Use:  "get-ocp-version <kubeVersionRange>",
-    Short: "get-ocp-version",
-    Long: `get-ocp-version derives a range of OCP versions from a given range of Kubernetes Version. It uses Mastermind/semver/v3 under the hood.`,
-	Args: cobra.ExactArgs(1),
-    RunE: func(cmd *cobra.Command, args []string) error {
+	Use:   "get-ocp-version <kubeVersionRange>",
+	Short: "get-ocp-version",
+	Long:  `get-ocp-version derives a range of OCP versions from a given range of Kubernetes Version. It uses Mastermind/semver/v3 under the hood.`,
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		resultOCPRange, err := GetOCPRange(args[0])
 		if err != nil {
@@ -150,11 +154,11 @@ var rootCmd = &cobra.Command{
 		}
 		fmt.Println(resultOCPRange)
 		return nil
-    },
+	},
 }
 
 func main() {
-    if err := rootCmd.Execute(); err != nil {
-        os.Exit(1)
-    }
+	if err := rootCmd.Execute(); err != nil {
+		os.Exit(1)
+	}
 }
