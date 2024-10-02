@@ -40,8 +40,13 @@ $(GOLANGCI_LINT):
 	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION))
 
 GOFUMPT = $(shell pwd)/bin/gofumpt
+# TODO(komish): 
+# gofumpt pinned to 0.6.0 which is the last version to support a min go
+# version of 1.20. When our min go version in go.mod is updated, we can bump
+# this back to latest.
+GOFUMPT_VERSION ?= v0.6.0
 gofumpt: ## Download envtest-setup locally if necessary.
-	$(call go-install-tool,$(GOFUMPT),mvdan.cc/gofumpt@latest)
+	$(call go-install-tool,$(GOFUMPT),mvdan.cc/gofumpt@$(GOFUMPT_VERSION))
 
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
