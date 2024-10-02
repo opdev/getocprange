@@ -1,5 +1,7 @@
 # Based on https://access.redhat.com/solutions/4870701
 versions:
+- kube-version: "1.30"
+  ocp-version: "4.17"
 - kube-version: "1.29"
   ocp-version: "4.16"
 - kube-version: "1.28"
