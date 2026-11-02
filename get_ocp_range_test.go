@@ -42,7 +42,7 @@ var _ = Describe("Unit tests for getOCPRange", func() {
 		Entry("When providing a single version with patch value to zero", "1.14.0", "4.2"),
 		Entry("When providing a single version with leading 'v'", "v1.25.x", "4.12"),
 		Entry("When providing a single version with with wildcard", "1.25.x", "4.12"),
-		Entry("When providing a single version mapped to several OCP versions", "1.36", ">=4.23 <=5.0"),
+		Entry("When providing a single version mapped to several OCP versions, defaulting to the lowest", "1.36", "4.23"),
 
 		// Open-ended ranges
 		Entry("When providing a range with a lower limit only, using space", ">= 1.14", ">=4.2"),
@@ -55,6 +55,8 @@ var _ = Describe("Unit tests for getOCPRange", func() {
 		// Ranges
 		Entry("When providing a range using a hyphen", "1.14 - 1.20", ">=4.2 <=4.7"),
 		Entry("When providing a range using lower and upper limits", ">=1.14 <=1.20", ">=4.2 <=4.7"),
+		Entry("When providing a bounded range matching a single Kubernetes version mapped to several OCP versions", ">=1.36 <=1.36", "4.23"),
+		Entry("When providing a bounded range whose upper limit is a Kubernetes version mapped to several OCP versions", ">=1.35 <=1.36", ">=4.22 <=5.0"),
 		Entry("When providing a range with an upper limit equal to the highest known Kubernetes Version", ">=1.14 <="+upperKubeVersion.Original(), ">=4.2 <="+maxUpperOCPVersion),
 	)
 
