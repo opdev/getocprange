@@ -1,5 +1,10 @@
 # Based on https://access.redhat.com/solutions/4870701
 versions:
+# OCP 4.23 and OCP 5.0 share the same Kubernetes minor version
+- kube-version: "1.36"
+  ocp-version: "5.0"
+- kube-version: "1.36"
+  ocp-version: "4.23"
 - kube-version: "1.35"
   ocp-version: "4.22"
 - kube-version: "1.34"

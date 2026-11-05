@@ -24,8 +24,10 @@ type versionMapping struct {
 	OcpVersion  string `yaml:"ocp-version"`
 }
 
-// Maps a Kubernetes version to its corresponding OCP version.
-var kubeOpenShiftVersionMap map[string]string
+// Maps a Kubernetes version to its corresponding OCP version(s). A Kubernetes
+// version can map to more than one OCP version, e.g. Kubernetes 1.36 maps to
+// both OCP 4.23 and OCP 5.0.
+var kubeOpenShiftVersionMap map[string][]string
 
 // Contains the highest known Kubernetes version. Used to determine if the provided Kubernetes
 // range is open-ended.
@@ -34,7 +36,7 @@ var upperKubeVersion *semver.Version
 // Upon initialization of this package, the kubeOpenShiftVersionMap variable is populated with the
 // content of kubeOpenShiftVersionMap.yaml.
 func init() {
-	kubeOpenShiftVersionMap = make(map[string]string)
+	kubeOpenShiftVersionMap = make(map[string][]string)
 
 	yamlFile, err := content.ReadFile("kubeOpenShiftVersionMap.yaml")
 	if err != nil {
@@ -59,7 +61,8 @@ func init() {
 		}
 
 		// Build Kubernetes version to OCP version mapping.
-		kubeOpenShiftVersionMap[versionMap.KubeVersion] = versionMap.OcpVersion
+		kubeOpenShiftVersionMap[versionMap.KubeVersion] = append(
+			kubeOpenShiftVersionMap[versionMap.KubeVersion], versionMap.OcpVersion)
 	}
 }
 
@@ -69,6 +72,13 @@ func init() {
 // constraint using Mastermind/semver/v3. It then checks which of the known Kubernetes versions
 // validate the Constraint, and registers the corresponding minimum and maximum OCP versions.
 // Finally, it builds the resulting range of OCP versions.
+//
+// A Kubernetes version can map to several OCP versions (e.g. Kubernetes 1.36 maps to both OCP
+// 4.23 and 5.0). When the provided range of Kubernetes versions matches a single Kubernetes
+// version in that situation, the lowest OCP version is returned by default (e.g. "1.36" returns
+// "4.23"), for compatibility with consumers expecting a single version. Ranges matching several
+// Kubernetes versions keep using the true minimum and maximum OCP versions (e.g. ">=1.14 <=1.36"
+// returns ">=4.2 <=5.0").
 //
 // This function currently doesn't support the || operator for the provided range of Kubernetes
 // versions.
@@ -81,13 +91,18 @@ func GetOCPRange(kubeVersionRange string) (string, error) {
 	minOCPRange, _ := semver.NewVersion("9.9")
 	maxOCPRange, _ := semver.NewVersion("0.0")
 
+	// Number of known Kubernetes versions matching the Constraint, and the OCP versions of the
+	// last matched Kubernetes version.
+	matchedKubeVersions := 0
+	var matchedOCPVersions []string
+
 	// Ensure that the provided range of Kubernetes versions is a valid SemVer constraint.
 	kubeVersionRangeConstraint, err := semver.NewConstraint(kubeVersionRange)
 	if err != nil {
 		return "", fmt.Errorf("error converting %s to Constraint: %v", kubeVersionRange, err)
 	}
 
-	for kubeVersionString, OCPVersionString := range kubeOpenShiftVersionMap {
+	for kubeVersionString, OCPVersionStrings := range kubeOpenShiftVersionMap {
 		// Check which of the known Kubernetes versions validate the Constraint.
 		kubeVersionObj, err := semver.NewVersion(kubeVersionString)
 		if err != nil {
@@ -95,16 +110,21 @@ func GetOCPRange(kubeVersionRange string) (string, error) {
 		}
 		isInRange, _ := kubeVersionRangeConstraint.Validate(kubeVersionObj)
 		if isInRange {
+			matchedKubeVersions++
+			matchedOCPVersions = OCPVersionStrings
+
 			// Register the corresponding minimum and maximum OCP versions.
-			OCPVersionObj, err := semver.NewVersion(OCPVersionString)
-			if err != nil {
-				return "", fmt.Errorf("error converting %s to Version: %v", OCPVersionString, err)
-			}
-			if OCPVersionObj.LessThan(minOCPRange) {
-				minOCPRange = OCPVersionObj
-			}
-			if OCPVersionObj.GreaterThan(maxOCPRange) {
-				maxOCPRange = OCPVersionObj
+			for _, OCPVersionString := range OCPVersionStrings {
+				OCPVersionObj, err := semver.NewVersion(OCPVersionString)
+				if err != nil {
+					return "", fmt.Errorf("error converting %s to Version: %v", OCPVersionString, err)
+				}
+				if OCPVersionObj.LessThan(minOCPRange) {
+					minOCPRange = OCPVersionObj
+				}
+				if OCPVersionObj.GreaterThan(maxOCPRange) {
+					maxOCPRange = OCPVersionObj
+				}
 			}
 		}
 	}
@@ -113,6 +133,11 @@ func GetOCPRange(kubeVersionRange string) (string, error) {
 	if minOCPRange.Original() == "9.9" {
 		// If the minimum was never set, it means we didn't match any known Kubernetes version.
 		return "", fmt.Errorf("failed to match any known Kubernetes version to the provided range %s", kubeVersionRange)
+	}
+	if matchedKubeVersions == 1 && len(matchedOCPVersions) > 1 {
+		// If a single Kubernetes version was matched and it maps to several OCP versions, default
+		// to the lowest OCP version.
+		maxOCPRange = minOCPRange
 	}
 	if isRangeOpenEnded(kubeVersionRangeConstraint) {
 		// If the provided range is open-ended, the result range should also be open-ended.

@@ -5,8 +5,21 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func getUpperOCPVersion() string {
-	return kubeOpenShiftVersionMap[upperKubeVersion.Original()]
+// Returns the lowest and highest OCP versions matching the highest known Kubernetes version.
+// A Kubernetes version can map to several OCP versions, in which case open-ended ranges are
+// expressed using the lowest, and bounded ranges using the highest.
+func getUpperOCPVersions() (string, string) {
+	minUpperOCPVersion := "9.9"
+	maxUpperOCPVersion := "0.0"
+	for _, OCPVersion := range kubeOpenShiftVersionMap[upperKubeVersion.Original()] {
+		if OCPVersion < minUpperOCPVersion {
+			minUpperOCPVersion = OCPVersion
+		}
+		if OCPVersion > maxUpperOCPVersion {
+			maxUpperOCPVersion = OCPVersion
+		}
+	}
+	return minUpperOCPVersion, maxUpperOCPVersion
 }
 
 // TODO: prerelease ?
@@ -15,6 +28,9 @@ func getUpperOCPVersion() string {
 // TODO: != operator ?
 
 var _ = Describe("Unit tests for getOCPRange", func() {
+	// Lowest and highest OCP versions matching the highest known Kubernetes version.
+	minUpperOCPVersion, maxUpperOCPVersion := getUpperOCPVersions()
+
 	DescribeTable("Providing a valid range of Kubernetes Version",
 		func(kubeVersionRange string, expectedOCPResultRange string) {
 			OCPResultRange, err := GetOCPRange(kubeVersionRange)
@@ -26,18 +42,22 @@ var _ = Describe("Unit tests for getOCPRange", func() {
 		Entry("When providing a single version with patch value to zero", "1.14.0", "4.2"),
 		Entry("When providing a single version with leading 'v'", "v1.25.x", "4.12"),
 		Entry("When providing a single version with with wildcard", "1.25.x", "4.12"),
+		Entry("When providing a single version mapped to several OCP versions, defaulting to the lowest", "1.36", "4.23"),
 
 		// Open-ended ranges
 		Entry("When providing a range with a lower limit only, using space", ">= 1.14", ">=4.2"),
 		Entry("When providing a range with a lower limit only, not using space", ">=1.14", ">=4.2"),
+		Entry("When providing an open-ended range starting at a Kubernetes version mapped to several OCP versions", ">=1.36", ">=4.23"),
 		PEntry("When providing a range with an upper limit only, using space", "<= 1.20", "<=4.7"),    // TODO: current output is 4.1 - 4.7
 		PEntry("When providing a range with an upper limit only, not using space", "<=1.20", "<=4.7"), // TODO: current output is 4.1 - 4.7
-		Entry("When providing a range with a lower limit equal to the highest known Kubernetes Version", ">="+upperKubeVersion.Original(), ">="+getUpperOCPVersion()),
+		Entry("When providing a range with a lower limit equal to the highest known Kubernetes Version", ">="+upperKubeVersion.Original(), ">="+minUpperOCPVersion),
 
 		// Ranges
 		Entry("When providing a range using a hyphen", "1.14 - 1.20", ">=4.2 <=4.7"),
 		Entry("When providing a range using lower and upper limits", ">=1.14 <=1.20", ">=4.2 <=4.7"),
-		Entry("When providing a range with an upper limit equal to the highest known Kubernetes Version", ">=1.14 <="+upperKubeVersion.Original(), ">=4.2 <="+getUpperOCPVersion()),
+		Entry("When providing a bounded range matching a single Kubernetes version mapped to several OCP versions", ">=1.36 <=1.36", "4.23"),
+		Entry("When providing a bounded range whose upper limit is a Kubernetes version mapped to several OCP versions", ">=1.35 <=1.36", ">=4.22 <=5.0"),
+		Entry("When providing a range with an upper limit equal to the highest known Kubernetes Version", ">=1.14 <="+upperKubeVersion.Original(), ">=4.2 <="+maxUpperOCPVersion),
 	)
 
 	DescribeTable("Providing an invalid range of Kubernetes Version",
